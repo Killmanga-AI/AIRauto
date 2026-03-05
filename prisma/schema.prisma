@@ -1,0 +1,172 @@
+// ============================================================
+// AIRAuto – Prisma Schema
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// User Model
+// ============================================================
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  invoices     Invoice[]
+  integrations Integration[]
+  auditLogs    AuditLog[]
+
+  @@map("users")
+}
+
+// ============================================================
+// Invoice Model (SA-specific)
+// ============================================================
+
+model Invoice {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // File metadata
+  originalFileName String
+  originalFilePath String
+  fileType         String // 'pdf' | 'jpg' | 'png'
+  uploadedAt       DateTime @default(now())
+
+  // Processing pipeline
+  status                String  @default("uploaded") // ProcessingStatus
+  processingStartedAt   DateTime?
+  processingCompletedAt DateTime?
+  aiModel               String? // e.g., "gpt-4o-mini", "gpt-4o"
+  ocrRawText            String? // Full OCR output
+  errorMessage          String? // If failed
+
+  // Extracted fields (SA-specific)
+  invoiceLabel           String?
+  invoiceLabelConfidence Float   @default(0.0)
+  vendorName             String?
+  vendorNameConfidence   Float   @default(0.0)
+  vendorAddress          String?
+  vendorVatNumber        String?
+  customerName           String?
+  customerAddress        String?
+  customerVatNumber      String?
+  invoiceNumber          String?
+  invoiceDate            DateTime?
+  description            String?
+
+  // Financial (ZAR)
+  subtotal      Decimal? @db.Decimal(10, 2)
+  vatRate       Float    @default(0.15) // 15% SA VAT
+  vatAmount     Decimal? @db.Decimal(10, 2)
+  totalAmount   Decimal? @db.Decimal(10, 2)
+  currency      String   @default("ZAR")
+
+  // SA Classification
+  invoiceType String @default("full") // 'full' | 'abridged' | 'no_invoice_required'
+
+  // Relations
+  lineItems LineItem[]
+
+  // Audit trail
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("invoices")
+}
+
+// ============================================================
+// LineItem Model
+// ============================================================
+
+model LineItem {
+  id        String   @id @default(cuid())
+  invoiceId String
+  invoice   Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  description String
+  quantity    Float
+  unitPrice   Decimal  @db.Decimal(10, 2) // ZAR
+  vatAmount   Decimal  @db.Decimal(10, 2) // ZAR
+  lineTotal   Decimal  @db.Decimal(10, 2) // ZAR (inclusive)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([invoiceId])
+  @@map("line_items")
+}
+
+// ============================================================
+// Integration Model (Sage, Xero, QB, etc.)
+// ============================================================
+
+model Integration {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  provider  String // 'sage' | 'xero' | 'quickbooks' | 'custom'
+  status    String @default("disconnected") // 'connected' | 'disconnected' | 'error'
+  
+  // OAuth or API credentials (encrypted at rest)
+  oauthToken      String?
+  oauthRefresh    String?
+  oauthExpires    DateTime?
+  apiKey          String?
+  apiSecret       String?
+  webhookUrl      String?
+  webhookSecret   String?
+
+  // Config
+  lastSyncedAt    DateTime?
+  syncFrequency   String   @default("manual") // 'manual' | 'daily' | 'weekly'
+  isActive        Boolean  @default(true)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, provider])
+  @@index([userId])
+  @@map("integrations")
+}
+
+// ============================================================
+// AuditLog Model (Compliance)
+// ============================================================
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  action    String // 'upload', 'validate', 'export', 'delete', 'manual_edit'
+  resource  String? // 'invoice', 'integration', 'export'
+  resourceId String?
+  status    String // 'success' | 'failure' | 'warning'
+  details   String? // JSON details
+
+  ipAddress String?
+  userAgent String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([action])
+  @@map("audit_logs")
+}
