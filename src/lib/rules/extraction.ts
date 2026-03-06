@@ -1,9 +1,4 @@
-import {
-  ExtractedField,
-  LineItem,
-  SAInvoice,
-  SA_VAT_RATE,
-} from "@/types/invoice";
+import { ExtractedField, LineItem, SAInvoice } from "@/types/invoice";
 import { detectVatInclusiveFlag, computeVatFromTotals } from "./normalization";
 
 export interface RuleExtractionResult {

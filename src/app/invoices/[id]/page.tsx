@@ -3,6 +3,25 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import {
+    CheckCircle2,
+    AlertTriangle,
+    XCircle,
+    FileText,
+    Save,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
 
 // Demo invoice detail
 const demoInvoice = {
@@ -214,210 +233,169 @@ export default function InvoiceDetailPage() {
     ).length;
 
     return (
-        <>
-            <div className="page-header">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <div className="flex items-center gap-md">
-                            <Link
-                                href="/invoices"
-                                className="btn btn-sm btn-secondary"
-                            >
-                                ← Back
-                            </Link>
-                            <div>
-                                <h1>Invoice Detail</h1>
-                                <p>
-                                    {demoInvoice.originalFileName} · Uploaded{" "}
-                                    {demoInvoice.uploadedAt}
-                                </p>
-                            </div>
-                        </div>
+        <div className="space-y-6">
+            <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
+                <div>
+                    <div className="flex items-center gap-2">
+                        <Button asChild variant="ghost" size="sm">
+                            <Link href="/invoices">Back</Link>
+                        </Button>
+                        <h1 className="text-2xl font-semibold text-slate-900">
+                            Invoice detail
+                        </h1>
                     </div>
-                    <div className="flex gap-sm">
-                        <button
-                            className="btn btn-primary"
-                            onClick={handleSave}
-                        >
-                            {saved ? "✓ Saved" : "💾 Save Changes"}
-                        </button>
-                        <Link href="/export" className="btn btn-gold">
-                            📦 Export
-                        </Link>
-                    </div>
+                    <p className="mt-1 text-sm text-slate-600">
+                        {demoInvoice.originalFileName} · Uploaded {demoInvoice.uploadedAt}
+                    </p>
+                </div>
+                <div className="flex gap-2">
+                    <Button onClick={handleSave}>
+                        <Save className="mr-2 h-4 w-4" />
+                        {saved ? "Saved" : "Save changes"}
+                    </Button>
+                    <Button asChild variant="secondary">
+                        <Link href="/export">Export</Link>
+                    </Button>
                 </div>
             </div>
 
-            <div className="page-body">
-                {/* Processing Info Bar */}
-                <div
-                    className="card flex items-center gap-lg mb-lg animate-fade-in"
-                    style={{
-                        padding: "12px 20px",
-                        background: "var(--bg-secondary)",
-                    }}
-                >
-                    <span className="badge badge-blue">
-                        🤖 {demoInvoice.aiModel}
-                    </span>
-                    <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>
-                        Processed in {demoInvoice.processingTime}
-                    </span>
-                    <span className="badge badge-green">Abridged Invoice</span>
-                    <span
-                        style={{
-                            marginLeft: "auto",
-                            fontSize: 13,
-                            color: "var(--text-secondary)",
-                        }}
-                    >
+            <Card>
+                <CardContent className="flex flex-wrap items-center gap-2 p-4 text-xs text-slate-600">
+                    <Badge variant="info">Model: {demoInvoice.aiModel}</Badge>
+                    <Badge variant="info">Processing: {demoInvoice.processingTime}</Badge>
+                    <Badge variant="warning">Status: needs review</Badge>
+                    <span className="ml-auto font-mono text-xs text-slate-400">
                         ID: {params.id}
                     </span>
-                </div>
+                </CardContent>
+            </Card>
 
-                <div className="invoice-detail-layout">
-                    {/* Left: Document Preview */}
-                    <div className="document-preview animate-fade-in">
-                        <div className="document-preview-text">
+            <div className="grid gap-4 lg:grid-cols-[1fr,1fr]">
+                <Card className="lg:sticky lg:top-24 lg:h-[calc(100vh-140px)]">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-slate-500" />
+                            Document preview
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                        <pre className="max-h-[70vh] overflow-auto rounded-md border border-slate-200 bg-slate-50 p-3 text-xs leading-6 text-slate-700">
                             {demoInvoice.ocrText}
-                        </div>
-                    </div>
+                        </pre>
+                    </CardContent>
+                </Card>
 
-                    {/* Right: Extracted Fields + Validation */}
-                    <div className="animate-slide-up">
-                        <h2
-                            style={{
-                                fontSize: 16,
-                                fontWeight: 600,
-                                marginBottom: 16,
-                            }}
-                        >
-                            Extracted Fields
-                        </h2>
-
-                        {Object.entries(fieldLabels).map(([key, label]) => (
-                            <div className="form-group" key={key}>
-                                <label className="form-label">
-                                    <span>{label}</span>
-                                    {demoInvoice.fields[key] && (
-                                        <span
-                                            className={`confidence ${demoInvoice.fields[key].level}`}
-                                        >
-                                            <span className="confidence-dot" />
-                                            {Math.round(
-                                                demoInvoice.fields[key].confidence * 100
-                                            )}
-                                            %
-                                        </span>
-                                    )}
-                                </label>
-                                <input
-                                    type="text"
-                                    className="form-input"
-                                    value={getFieldValue(key)}
-                                    onChange={(e) =>
-                                        handleFieldChange(key, e.target.value)
-                                    }
-                                />
-                            </div>
-                        ))}
-
-                        {/* Line Items */}
-                        <h2
-                            style={{
-                                fontSize: 16,
-                                fontWeight: 600,
-                                marginTop: 24,
-                                marginBottom: 16,
-                            }}
-                        >
-                            Line Items
-                        </h2>
-
-                        <div className="table-wrap">
-                            <table className="table">
-                                <thead>
-                                    <tr>
-                                        <th>Description</th>
-                                        <th>Qty</th>
-                                        <th>Unit Price</th>
-                                        <th>VAT</th>
-                                        <th>Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {demoInvoice.lineItems.map((li, idx) => (
-                                        <tr key={idx}>
-                                            <td>{li.description}</td>
-                                            <td>{li.quantity}</td>
-                                            <td style={{ fontFamily: "monospace" }}>
-                                                {formatZAR(li.unitPrice)}
-                                            </td>
-                                            <td style={{ fontFamily: "monospace" }}>
-                                                {formatZAR(li.vatAmount)}
-                                            </td>
-                                            <td
-                                                style={{
-                                                    fontFamily: "monospace",
-                                                    fontWeight: 600,
-                                                }}
-                                            >
-                                                {formatZAR(li.lineTotal)}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* SARS Validation Panel */}
-                        <h2
-                            style={{
-                                fontSize: 16,
-                                fontWeight: 600,
-                                marginTop: 24,
-                                marginBottom: 8,
-                            }}
-                        >
-                            🇿🇦 SARS Validation
-                        </h2>
-                        <p
-                            style={{
-                                fontSize: 13,
-                                color: "var(--text-secondary)",
-                                marginBottom: 16,
-                            }}
-                        >
-                            {passCount} passed · {failCount} failed ·{" "}
-                            {demoInvoice.validationResults.length} total checks
-                        </p>
-
-                        <div className="validation-panel">
-                            {demoInvoice.validationResults.map((v, idx) => (
-                                <div className="validation-item" key={idx}>
-                                    <div
-                                        className={`validation-icon ${v.valid
-                                                ? "pass"
-                                                : v.severity === "warning"
-                                                    ? "warn"
-                                                    : "fail"
-                                            }`}
-                                    >
-                                        {v.valid ? "✓" : v.severity === "warning" ? "!" : "✕"}
+                <div className="space-y-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Extracted data</CardTitle>
+                        </CardHeader>
+                        <CardContent className="grid gap-3 pt-0">
+                            {Object.entries(fieldLabels).map(([key, label]) => (
+                                <div key={key} className="grid gap-1">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-xs font-medium text-slate-600">
+                                            {label}
+                                        </label>
+                                        {demoInvoice.fields[key] ? (
+                                            <span className="text-xs text-slate-500">
+                                                {Math.round(demoInvoice.fields[key].confidence * 100)}%
+                                            </span>
+                                        ) : null}
                                     </div>
-                                    <div className="validation-text">
-                                        <span className="validation-field">
-                                            {fieldLabels[v.field] || v.field}
-                                        </span>
-                                        <br />
-                                        <span className="validation-msg">{v.message}</span>
-                                    </div>
+                                    <Input
+                                        value={getFieldValue(key)}
+                                        onChange={(e) => handleFieldChange(key, e.target.value)}
+                                    />
                                 </div>
                             ))}
-                        </div>
-                    </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Line items</CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Description</TableHead>
+                                            <TableHead className="text-right">Qty</TableHead>
+                                            <TableHead className="text-right">Unit price</TableHead>
+                                            <TableHead className="text-right">VAT</TableHead>
+                                            <TableHead className="text-right">Total</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {demoInvoice.lineItems.map((li, idx) => (
+                                            <TableRow key={idx}>
+                                                <TableCell className="text-sm font-medium text-slate-900">
+                                                    {li.description}
+                                                </TableCell>
+                                                <TableCell className="text-right font-mono text-xs">
+                                                    {li.quantity}
+                                                </TableCell>
+                                                <TableCell className="text-right font-mono text-xs">
+                                                    {formatZAR(li.unitPrice)}
+                                                </TableCell>
+                                                <TableCell className="text-right font-mono text-xs">
+                                                    {formatZAR(li.vatAmount)}
+                                                </TableCell>
+                                                <TableCell className="text-right font-mono text-xs font-semibold text-slate-900">
+                                                    {formatZAR(li.lineTotal)}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>🇿🇦 SARS validation</CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                            <div className="mb-3 text-xs text-slate-600">
+                                {passCount} passed · {failCount} failed · {demoInvoice.validationResults.length} total checks
+                            </div>
+                            <div className="space-y-2">
+                                {demoInvoice.validationResults.map((v, idx) => {
+                                    const Icon = v.valid
+                                        ? CheckCircle2
+                                        : v.severity === "warning"
+                                            ? AlertTriangle
+                                            : XCircle;
+                                    const variant =
+                                        v.valid ? "success" : v.severity === "warning" ? "warning" : "destructive";
+                                    return (
+                                        <div
+                                            key={idx}
+                                            className="flex items-start justify-between gap-3 rounded-md border border-slate-200 bg-white p-3"
+                                        >
+                                            <div className="flex items-start gap-2">
+                                                <Icon className="mt-0.5 h-4 w-4 text-slate-500" />
+                                                <div>
+                                                    <div className="text-sm font-medium text-slate-900">
+                                                        {fieldLabels[v.field] || v.field}
+                                                    </div>
+                                                    <div className="mt-0.5 text-xs text-slate-600">
+                                                        {v.message}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <Badge variant={variant}>{v.severity}</Badge>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
-        </>
+        </div>
     );
 }

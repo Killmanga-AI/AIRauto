@@ -6,7 +6,7 @@ import { Worker, Job } from 'bullmq';
 import Redis from 'ioredis';
 import { db } from '@/lib/db';
 import { getStorage } from '@/lib/storage';
-import { runOcr } from '@/lib/ocr';
+import { runOcr } from '@/lib/ai/ocr';
 import { extractInvoiceData } from '@/lib/ai/extractor';
 import { validateSARSInvoice } from '@/lib/validation/sars';
 import { ProcessingStatus } from '@/types/invoice';

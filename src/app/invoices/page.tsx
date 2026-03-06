@@ -2,6 +2,19 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { Search, Filter } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
 
 // Demo invoices for the list view
 const demoInvoices = [
@@ -100,13 +113,13 @@ const demoInvoices = [
 
 const statusConfig: Record<
     string,
-    { className: string; label: string }
+    { label: string; variant: "info" | "warning" | "success" | "destructive" }
 > = {
-    validated: { className: "badge-green", label: "Validated" },
-    needs_review: { className: "badge-gold", label: "Needs Review" },
-    exported: { className: "badge-purple", label: "Exported" },
-    queued: { className: "badge-blue", label: "Processing" },
-    failed: { className: "badge-red", label: "Failed" },
+    validated: { label: "Validated", variant: "success" },
+    needs_review: { label: "Needs review", variant: "warning" },
+    exported: { label: "Exported", variant: "info" },
+    queued: { label: "Processing", variant: "info" },
+    failed: { label: "Failed", variant: "destructive" },
 };
 
 const typeLabels: Record<string, string> = {
@@ -118,9 +131,11 @@ const typeLabels: Record<string, string> = {
 export default function InvoicesPage() {
     const [filter, setFilter] = useState<string>("all");
     const [search, setSearch] = useState("");
+    const [supplierFilter, setSupplierFilter] = useState<string>("all");
 
     const filtered = demoInvoices.filter((inv) => {
         if (filter !== "all" && inv.status !== filter) return false;
+        if (supplierFilter !== "all" && inv.vendor !== supplierFilter) return false;
         if (
             search &&
             !inv.vendor.toLowerCase().includes(search.toLowerCase()) &&
@@ -136,180 +151,157 @@ export default function InvoicesPage() {
             maximumFractionDigits: 2,
         })}`;
 
+    const suppliers = Array.from(new Set(demoInvoices.map((i) => i.vendor)));
+
     return (
-        <>
-            <div className="page-header">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1>Invoices</h1>
-                        <p>Manage extracted invoices and receipts</p>
-                    </div>
-                    <Link href="/upload" className="btn btn-primary">
-                        📤 Upload New
-                    </Link>
+        <div className="space-y-6">
+            <div className="flex flex-col justify-between gap-3 md:flex-row md:items-center">
+                <div>
+                    <h1 className="text-2xl font-semibold text-slate-900">Invoices</h1>
+                    <p className="mt-1 text-sm text-slate-600">
+                        Review extracted invoices, validate SARS compliance, and prepare exports.
+                    </p>
                 </div>
+                <Button asChild>
+                    <Link href="/upload">Upload documents</Link>
+                </Button>
             </div>
 
-            <div className="page-body">
-                {/* Filters */}
-                <div
-                    className="flex items-center gap-md mb-lg animate-fade-in"
-                    style={{ flexWrap: "wrap" }}
-                >
-                    <input
-                        type="text"
-                        className="form-input"
-                        placeholder="Search vendor or invoice number..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        style={{ maxWidth: 320 }}
-                    />
-
-                    <div className="flex gap-sm">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Filter className="h-4 w-4 text-slate-500" />
+                        Filters
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-3 md:grid-cols-3">
+                    <div className="relative md:col-span-2">
+                        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                        <Input
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder="Search supplier or invoice number..."
+                            className="pl-9"
+                        />
+                    </div>
+                    <div className="flex gap-2">
+                        <select
+                            className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                            value={supplierFilter}
+                            onChange={(e) => setSupplierFilter(e.target.value)}
+                        >
+                            <option value="all">All suppliers</option>
+                            {suppliers.map((s) => (
+                                <option key={s} value={s}>
+                                    {s}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="md:col-span-3 flex flex-wrap gap-2">
                         {[
                             { key: "all", label: "All" },
-                            { key: "needs_review", label: "Needs Review" },
+                            { key: "needs_review", label: "Needs review" },
                             { key: "validated", label: "Validated" },
                             { key: "exported", label: "Exported" },
                             { key: "queued", label: "Processing" },
                         ].map((f) => (
-                            <button
+                            <Button
                                 key={f.key}
-                                className={`btn btn-sm ${filter === f.key ? "btn-primary" : "btn-secondary"
-                                    }`}
+                                variant={filter === f.key ? "default" : "secondary"}
+                                size="sm"
                                 onClick={() => setFilter(f.key)}
                             >
                                 {f.label}
-                            </button>
+                            </Button>
                         ))}
                     </div>
-                </div>
+                </CardContent>
+            </Card>
 
-                {/* Invoice Table */}
-                <div className="table-wrap animate-slide-up">
-                    <table className="table">
-                        <thead>
-                            <tr>
-                                <th>Vendor</th>
-                                <th>VAT Number</th>
-                                <th>Invoice #</th>
-                                <th>Date</th>
-                                <th>Type</th>
-                                <th>Subtotal</th>
-                                <th>VAT (15%)</th>
-                                <th>Total (ZAR)</th>
-                                <th>Confidence</th>
-                                <th>Status</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filtered.map((inv) => (
-                                <tr key={inv.id}>
-                                    <td>
-                                        <span style={{ fontWeight: 500 }}>{inv.vendor}</span>
-                                    </td>
-                                    <td
-                                        style={{
-                                            fontFamily: "monospace",
-                                            fontSize: 13,
-                                            color: "var(--text-secondary)",
-                                        }}
-                                    >
-                                        {inv.vendorVat}
-                                    </td>
-                                    <td style={{ fontFamily: "monospace", fontSize: 13 }}>
-                                        {inv.number}
-                                    </td>
-                                    <td style={{ color: "var(--text-secondary)" }}>
-                                        {inv.date}
-                                    </td>
-                                    <td>
-                                        <span className="badge badge-blue">
-                                            {typeLabels[inv.type]}
-                                        </span>
-                                    </td>
-                                    <td style={{ fontFamily: "monospace" }}>
-                                        {formatZAR(inv.subtotal)}
-                                    </td>
-                                    <td style={{ fontFamily: "monospace" }}>
-                                        {formatZAR(inv.vat)}
-                                    </td>
-                                    <td style={{ fontWeight: 600, fontFamily: "monospace" }}>
-                                        {formatZAR(inv.total)}
-                                    </td>
-                                    <td>
-                                        {inv.confidence > 0 ? (
-                                            <span
-                                                className={`confidence ${inv.confidence >= 0.8
-                                                        ? "high"
-                                                        : inv.confidence >= 0.5
-                                                            ? "medium"
-                                                            : "low"
-                                                    }`}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Invoice list</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Supplier</TableHead>
+                                    <TableHead>VAT number</TableHead>
+                                    <TableHead>Invoice #</TableHead>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Invoice type</TableHead>
+                                    <TableHead className="text-right">Total (ZAR)</TableHead>
+                                    <TableHead>Confidence</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead />
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filtered.map((inv) => (
+                                    <TableRow key={inv.id}>
+                                        <TableCell className="font-medium text-slate-900">
+                                            {inv.vendor}
+                                        </TableCell>
+                                        <TableCell className="font-mono text-xs text-slate-600">
+                                            {inv.vendorVat}
+                                        </TableCell>
+                                        <TableCell className="font-mono text-xs text-slate-700">
+                                            {inv.number}
+                                        </TableCell>
+                                        <TableCell className="text-xs text-slate-600">
+                                            {inv.date}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge variant="outline">{typeLabels[inv.type]}</Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right font-mono text-xs font-semibold text-slate-900">
+                                            {formatZAR(inv.total)}
+                                        </TableCell>
+                                        <TableCell className="text-xs text-slate-700">
+                                            {inv.confidence > 0 ? `${Math.round(inv.confidence * 100)}%` : "—"}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge
+                                                variant={statusConfig[inv.status]?.variant}
                                             >
-                                                <span className="confidence-dot" />
-                                                {Math.round(inv.confidence * 100)}%
-                                            </span>
-                                        ) : (
-                                            <span style={{ color: "var(--text-muted)", fontSize: 12 }}>
-                                                —
-                                            </span>
-                                        )}
-                                    </td>
-                                    <td>
-                                        <span
-                                            className={`badge ${statusConfig[inv.status]?.className}`}
-                                        >
-                                            {statusConfig[inv.status]?.label}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <Link
-                                            href={`/invoices/${inv.id}`}
-                                            className="btn btn-sm btn-secondary"
-                                        >
-                                            View
-                                        </Link>
-                                    </td>
-                                </tr>
-                            ))}
-                            {filtered.length === 0 && (
-                                <tr>
-                                    <td
-                                        colSpan={11}
-                                        style={{
-                                            textAlign: "center",
-                                            padding: "40px 0",
-                                            color: "var(--text-muted)",
-                                        }}
-                                    >
-                                        No invoices found matching your filters
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                                {statusConfig[inv.status]?.label}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                            <Button asChild variant="ghost" size="sm">
+                                                <Link href={`/invoices/${inv.id}`}>Open</Link>
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                                {filtered.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={9} className="py-10 text-center text-sm text-slate-500">
+                                            No invoices found for the selected filters.
+                                        </TableCell>
+                                    </TableRow>
+                                ) : null}
+                            </TableBody>
+                        </Table>
+                    </div>
 
-                {/* Summary bar */}
-                <div
-                    className="card mt-lg flex items-center justify-between"
-                    style={{ padding: "12px 24px" }}
-                >
-                    <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>
-                        Showing {filtered.length} of {demoInvoices.length} invoices
-                    </span>
-                    <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>
-                        Total VAT:{" "}
-                        <strong style={{ color: "var(--accent-gold)" }}>
-                            {formatZAR(
-                                filtered.reduce((sum, inv) => sum + inv.vat, 0)
-                            )}
-                        </strong>
-                    </span>
-                </div>
-            </div>
-        </>
+                    <div className="mt-4 flex items-center justify-between text-xs text-slate-600">
+                        <span>
+                            Showing <span className="font-semibold text-slate-900">{filtered.length}</span> of{" "}
+                            <span className="font-semibold text-slate-900">{demoInvoices.length}</span>
+                        </span>
+                        <span>
+                            Total VAT:{" "}
+                            <span className="font-semibold text-slate-900">
+                                {formatZAR(filtered.reduce((sum, inv) => sum + inv.vat, 0))}
+                            </span>
+                        </span>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
     );
 }
